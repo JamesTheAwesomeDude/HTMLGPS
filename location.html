@@ -149,7 +149,7 @@ function updateUserDisplays(pos){
 	let distanceEl=document.getElementById('distance');
 	
 	speedEl.textContent=renderPrettySpeed(pos.coords.speed,speedEl.getAttribute('data-unit'));// + renderPrettyBearing(tripLog,pos)
-	locationEl.textContent=renderPrettyCoords(lat,lon);
+	locationEl.textContent=renderPrettyCoords(pos.coords);
 	distanceEl.textContent=TripLog.renderPrettyDistance(tripLog,distanceEl.getAttribute('data-unit'));
 }
 
@@ -158,8 +158,14 @@ function renderPrettySpeed(speed,unit='mph'){
 	return (speed*unitConversions[unit]).toFixed(1)+unit;
 }
 
-function renderPrettyCoords(lat,long){
-	return OpenLocationCode.encode(lat,long,OpenLocationCode.CODE_PRECISION_EXTRA).slice(4);
+function renderPrettyCoords(coords){
+	let lat=coords.latitude;
+	let lon=coords.longitude;
+	if(coords.accuracy<10){
+		return OpenLocationCode.encode(lat,lon,OpenLocationCode.CODE_PRECISION_EXTRA ).slice(4);
+	} else {
+		return OpenLocationCode.encode(lat,lon,OpenLocationCode.CODE_PRECISION_NORMAL).slice(4);
+	}
 }
 
 function enableNoSleep(){
