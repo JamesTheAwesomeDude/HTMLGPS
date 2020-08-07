@@ -23,7 +23,8 @@ function _main(){
 		invalidateUserDisplays();
 		//closeTripLogSegment(tripLog);
 		tripLog.offerToSave();
-	 }
+	 },
+	 {enableHighAccuracy: true}
 	);
 	enableNoSleep();
 }
@@ -104,8 +105,7 @@ http://www.topografix.com/GPX/1/0/gpx.xsd">
 		let time=(new Date(pos.timestamp)).toISOString();
 		payload.push(
 `<trkpt lat="${lat}" lon="${lon}">${
-ele?`  <ele>${ele}</ele>
-`:''}
+ele?`  <ele>${ele}</ele>`:''}
 <time>${time}</time>
 </trkpt>
 `
