@@ -9,20 +9,20 @@
 <script>
 const softwareVersionString=`HTMLGPS v0.0.1 [${navigator.userAgent}] - https://www.github.com/JamesTheAwesomeDude/HTMLGPS`
 
-var tripLog=new Object();
+var tripLog;
 
 function _main(){
-	initializeTripLog();
+	tripLog=new TripLog();
 	applyLanguagePrefs();
 	geo.watchPosition(pos=>{
 		//openTripLogSegment(tripLog);
 		updateUserDisplays(pos);
-		updateTripLog(tripLog,pos);
+		tripLog.update(pos);
 	 },
 	 err=>{
 		invalidateUserDisplays();
 		//closeTripLogSegment(tripLog);
-		offerToSaveTripLog(tripLog);
+		tripLog.offerToSave();
 	 }
 	);
 	enableNoSleep();
@@ -30,6 +30,98 @@ function _main(){
 
 function main(event){//body.onload=='main(event);'
 	_main();
+}
+
+class TripLog {
+ constructor(){
+	this.date=new Date();
+	this.entries=[];
+ }
+
+ update(pos){
+	this.entries.push(pos);
+ }
+
+ vibeCheck(){
+	let numberOfZeroEles=this.entries.reduce(
+	 (n,pos)=>(
+	  n+(pos.coords.altitude==0.0)
+	 ),
+	 0
+	);
+	if(numberOfZeroEles>Math.sqrt(this.entries.length)){
+		this.entries.forEach(pos=>{
+			delete pos.coords.altitude;
+		});
+	}
+ }
+
+ offerToSave(container=document.getElementById('tripLogLinkWrapper')){
+	this.vibeCheck();
+	let payload=TripLog.renderPayload(this);
+	let a=document.createElement('a');
+	let fname=`trip_${getYYYYMMDDHHMM()}.gpx`;
+	a.href=renderBlobURL(payload,fname,{type:'text/xml'});
+	a.download=fname;
+	a.textContent=fname;
+	a.onclick=ev=>setTimeout(e=>{
+		URL.revokeObjectURL(
+		 e.parentNode.removeChild(e)
+		 .href
+		);
+	},0,ev.target);
+	container.appendChild(a);
+ }
+
+ static renderPrettyDistance(tripLog,unit='miles'){
+	return '[TODO]';
+ }
+
+ static renderPayload(tripLog){
+	let payload=[];
+	payload.push(
+`<?xml version="1.0"?>
+<gpx
+ version="1.0"
+creator="${softwareVersionString}"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns="http://www.topografix.com/GPX/1/0"
+xsi:schemaLocation="http://www.topografix.com/GPX/1/0
+http://www.topografix.com/GPX/1/0/gpx.xsd">
+<time>${tripLog.date.toISOString()}</time>
+`
+	);
+	
+	payload.push(
+`<trk><name>${escapeText(prompt('What do you want to name this trace?') || 'test run')}</name>
+<trkseg>
+` //TODO: multi-segments based on when the page lost focus
+	);
+	tripLog.entries.forEach(pos=>{
+		let lat=pos.coords.latitude;
+		let lon=pos.coords.longitude;
+		let ele=pos.coords.altitude;
+		let time=(new Date(pos.timestamp)).toISOString();
+		payload.push(
+`<trkpt lat="${lat}" lon="${lon}">${
+ele?`  <ele>${ele}</ele>
+`:''}
+<time>${time}</time>
+</trkpt>
+`
+		);
+	});
+	payload.push(
+`</trkseg>
+</trk>
+`
+	);
+	payload.push(
+`</gpx>`
+	);
+	
+	return payload;
+ }
 }
 
 const geo=navigator.geolocation;
@@ -58,7 +150,7 @@ function updateUserDisplays(pos){
 	
 	speedEl.textContent=renderPrettySpeed(pos.coords.speed,speedEl.getAttribute('data-unit'));// + renderPrettyBearing(tripLog,pos)
 	locationEl.textContent=renderPrettyCoords(lat,lon);
-	distanceEl.textContent=renderPrettyDistance(tripLog,pos,speedEl.getAttribute('data-unit'));
+	distanceEl.textContent=TripLog.renderPrettyDistance(tripLog,distanceEl.getAttribute('data-unit'));
 }
 
 function renderPrettySpeed(speed,unit='mph'){
@@ -70,84 +162,11 @@ function renderPrettyCoords(lat,long){
 	return OpenLocationCode.encode(lat,long,OpenLocationCode.CODE_PRECISION_EXTRA).slice(4);
 }
 
-function renderPrettyDistance(tripLog,pos,unit='miles'){
-	return '[TODO]';
-}
-
-function initializeTripLog(){
-	tripLog.date=new Date();
-	tripLog.entries=[];
-}
-
-function updateTripLog(tripLog,pos){
-	tripLog.entries.push(pos);
-}
-
 function enableNoSleep(){
 	document.addEventListener('click', function enableNoSleep() {
 		document.removeEventListener('click', enableNoSleep, false);
 		noSleep.enable();
 	}, false);
-}
-
-function offerToSaveTripLog(tripLog){
-	let payload=[];
-	
-	tripLogVibeCheck(tripLog);
-	
-	payload.push(
-`<?xml version="1.0"?>
-<gpx
- version="1.0"
-creator="${softwareVersionString}"
-xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xmlns="http://www.topografix.com/GPX/1/0"
-xsi:schemaLocation="http://www.topografix.com/GPX/1/0
-http://www.topografix.com/GPX/1/0/gpx.xsd">
-<time>${tripLog.date.toISOString()}</time>
-`
-	);
-	
-	payload.push(
-`<trk><name>${escapeText(prompt('What do you want to name this trace?') || 'test run')}</name>
-<trkseg>
-` //TODO: multi-segments based on when the page lost focus
-	);
-	tripLog.entries.forEach(pos=>{
-		let lat=pos.coords.latitude;
-		let lon=pos.coords.longitude;
-		let ele=pos.coords.altitude;
-		let time=(d=new Date(pos.timestamp)).toISOString();
-		payload.push(
-`<trkpt lat="${lat}" lon="${lon}">${
-ele?`  <ele>${ele}</ele>
-`:''}
-<time>${time}</time>
-</trkpt>
-`
-		);
-	});
-	payload.push(
-`</trkseg>
-</trk>
-`
-	);
-	payload.push(
-`</gpx>`
-	);
-	let container=document.getElementById('tripLogLinkWrapper');
-	let a=document.createElement('a');
-	let fname=`trip_${getYYYYMMDDHHMM()}.gpx`;
-	a.href=renderBlobURL(payload,fname,{type:'text/xml'});
-	a.download=fname;
-	a.textContent=fname;
-	a.onclick=ev=>setTimeout(e=>{
-		URL.revokeObjectURL(
-		 e.parentNode.removeChild(e)
-		 .href
-		);
-	},0,ev.target);
-	container.appendChild(a);
 }
 
 function getYYYYMMDDHHMM(d=new Date()){
@@ -169,20 +188,6 @@ function renderBlobURL(data,fname,properties){// ht- https://stackoverflow.com/a
 		file = new Blob(data, properties);
 	}
 	return URL.createObjectURL(file);
-}
-
-function tripLogVibeCheck(tripLog){
-	let numberOfZeroEles=tripLog.entries.reduce(
-	 (n,pos)=>(
-	  n+(pos.coords.altitude==0.0)
-	 ),
-	 0
-	);
-	if(numberOfZeroEles>Math.sqrt(tripLog.entries.length)){
-		tripLog.entries.forEach(pos=>{
-			delete pos.coords.altitude;
-		});
-	}
 }
 
 function enableNoSleep(){
@@ -230,7 +235,7 @@ function applyLanguagePrefs(){
 <div class="telemetryDisplayWrapper">
 <p id="speedWrapper">Speed: <span id="speed">…</span></p>
 <p id="locationWrapper">Location: <span id="location">…</span></p>
-<p id="distanceWrapper">Distance Traveled: <span id="distance">…</span><br /><button onclick="offerToSaveTripLog(tripLog);">Save Trip Log</button></p>
+<p id="distanceWrapper">Distance Traveled: <span id="distance">…</span><br /><button onclick="tripLog.offerToSave();">Save Trip Log</button></p>
 </div>
 <p id="tripLogLinkWrapper"></p>
 </body>
