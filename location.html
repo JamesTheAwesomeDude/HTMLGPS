@@ -64,12 +64,12 @@ class TripLog {
 	a.href=renderBlobURL(payload,fname,{type:'text/xml'});
 	a.download=fname;
 	a.textContent=fname;
-	a.onclick=ev=>setTimeout(e=>{
-		URL.revokeObjectURL(
-		 e.parentNode.removeChild(e)
-		 .href
-		);
-	},0,ev.target);
+	a.onclick=ev=>setTimeout(e=>(
+	 URL.revokeObjectURL(
+	  e.parentNode.removeChild(e)
+	  .href
+	 )
+	),0,ev.target);
 	container.appendChild(a);
  }
 
