@@ -23,7 +23,9 @@ function _main(){
 		alert(`Error is allegedly:\n\n${err.message}`);
 		invalidateUserDisplays();
 		//closeTripLogSegment(tripLog);
-		tripLog.offerToSave();
+		if(tripLog.currentSegment.length){
+			tripLog.offerToSave();
+		}
 	 },
 	 {enableHighAccuracy: true}
 	);
@@ -184,6 +186,20 @@ function updateUserDisplays(pos){
 	locationEl.textContent=renderPrettyCoords(pos.coords);
 	locationUncertaintyEl.textContent='±∓'[tripLog.currentSegment.length%2]+`${accuracy.toFixed(1)}m`;
 	distanceEl.textContent=TripLog.renderPrettyDistance(tripLog,distanceEl.getAttribute('data-unit'));
+}
+function invalidateUserDisplays(){
+	const alertEmoji='\u26A0\uFE0F';
+
+	let tdr=document.querySelector('.telemetryDisplayWrapper');
+	let speedEl=document.getElementById('speed');
+	let locationEl=document.getElementById('location');
+	let locationUncertaintyEl=document.getElementById('locU');
+	let distanceEl=document.getElementById('distance');
+
+	speedEl.textContent='…';
+	locationEl.textContent=alertEmoji;
+	locationUncertaintyEl.textContent='…';
+	tdr.style.backgroundColor='red';
 }
 
 function renderPrettySpeed(coords,unit='mph'){
