@@ -26,7 +26,6 @@ function _main(){
 	 },
 	 {enableHighAccuracy: true}
 	);
-	enableNoSleep();
 }
 
 function main(event){//body.onload=='main(event);'
@@ -201,13 +200,6 @@ function renderPrettyCoords(coords){
 	}
 }
 
-function enableNoSleep(){
-	document.addEventListener('click', function enableNoSleep() {
-		document.removeEventListener('click', enableNoSleep, false);
-		noSleep.enable();
-	}, false);
-}
-
 function getYYYYMMDDHHMM(d=new Date()){
 	const pad=s=>('0'+s).slice(('0'+s).length-2);
 	return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}`;
@@ -229,12 +221,17 @@ function renderBlobURL(data,fname,properties){// ht- https://stackoverflow.com/a
 	return URL.createObjectURL(file);
 }
 
-function enableNoSleep(){
-	const noSleep = new NoSleep();
-	document.addEventListener('click', function enableNoSleep() {
-		document.removeEventListener('click', enableNoSleep, false);
-		noSleep.enable();
-	}, false);
+function enableNoSleepButton(event){
+	window.noSleep = new NoSleep();
+	window.noSleep.enable();
+	event.target.setAttribute('onclick','disableNoSleepButton(event);');
+	event.target.textContent="Resume intermittency";
+}
+function disableNoSleepButton(event){
+	window.noSleep.disable();
+	delete window.noSleep;
+	event.target.setAttribute('onclick','enableNoSleepButton(event);');
+	event.target.textContent="Keep screen awake";
 }
 
 function applyLanguagePrefs(){
@@ -268,6 +265,9 @@ function applyLanguagePrefs(){
 #distance {
 	font-size: large;
 }
+[onclick^="enableNoSleepButton"] {
+	box-shadow: 0 0 1em 1pt orange;
+}
 </style>
 </head>
 <body onload="main();">
@@ -277,5 +277,6 @@ function applyLanguagePrefs(){
 <p id="distanceWrapper">Distance Traveled: <span id="distance">…</span><br /><button onclick="tripLog.offerToSave();">Save Trip Log</button></p>
 </div>
 <p id="tripLogLinkWrapper"></p>
+<p><br /><button onclick="enableNoSleepButton(event);">Keep screen awake</button></p>
 </body>
 </html>
