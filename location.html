@@ -2,12 +2,12 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=2">
-<title>HTMLGPS 0.0.1</title>
+<title>HTMLGPS 0.0.2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/openlocationcode/1.0.4/openlocationcode.min.js" integrity="sha512-nNdmCJgFefLPn6W79uEUxH2n4+qbc0kJM8uBD8f7GlmusrQN9L13hpSBRxLHdLs+6oSDurcCuDlBXVKaz/hpcA==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.11.0/NoSleep.min.js" integrity="sha512-z2nddjNLcxjIKYaNqKfpwgl+8mFVU4gTL8afldQukUIOKYgFbD2TyDCyAFlCKuWoLhEJ49zpEnzLDiPMXKJ1kQ==" crossorigin="anonymous"></script>
 <script src="vincenty.js"></script>
 <script>
-const softwareVersionString=`HTMLGPS v0.0.1 [${navigator.userAgent}] - https://www.github.com/JamesTheAwesomeDude/HTMLGPS`
+const softwareVersionString=`${document.querySelector('title').textContent} [${navigator.userAgent}] - https://www.github.com/JamesTheAwesomeDude/HTMLGPS`
 
 var tripLog;
 
@@ -36,24 +36,47 @@ function main(event){//body.onload=='main(event);'
 class TripLog {
  constructor(){
 	this.date=new Date();
-	this.entries=[];
+	this.entries=[new Array()];
+ }
+
+ get currentSegment() {return this.entries.slice(-1)[0]};
+
+ incrementSegment(){
+	this.entries.push(new Array());
  }
 
  update(pos){
-	this.entries.push(pos);
+	let t=pos.timestamp;
+	let d1t,d2t;
+	if(this.currentSegment.length>1){
+		d1t=t-this.currentSegment.slice(-1)[0].timestamp;
+		d2t=t-d1t-this.currentSegment.slice(-2)[0].timestamp;
+		if( d1t > Math.E*d2t ){
+			this.incrementSegment();
+		}
+	}
+	this.currentSegment.push(pos);
  }
 
  vibeCheck(){
-	let numberOfZeroEles=this.entries.reduce(
-	 (n,pos)=>(
-	  n+(pos.coords.altitude==0.0)
-	 ),
-	 0
+	let numberOfZeroEles=0;
+	let numberOfTrkpts=0;
+	this.entries.forEach(
+	 segment=>segment.forEach(
+	  pos=>{
+	  	numberOfTrkpts++;
+	  	numberOfZeroEles+=(pos.coords.altitude==0.0);
+	  }
+	 )
 	);
-	if(numberOfZeroEles>Math.sqrt(this.entries.length)){
-		this.entries.forEach(pos=>{
-			delete pos.coords.altitude;
-		});
+	if(numberOfZeroEles>Math.sqrt(numberOfTrkpts)){
+	 this.entries.forEach(
+	  segment=>segment.forEach(
+	   pos=>{
+	   	delete pos.coords.altitude;
+	   }
+	  )
+	 );
 	}
  }
 
@@ -95,25 +118,33 @@ http://www.topografix.com/GPX/1/0/gpx.xsd">
 	
 	payload.push(
 `<trk><name>${escapeText(prompt('What do you want to name this trace?') || 'test run')}</name>
-<trkseg>
 ` //TODO: multi-segments based on when the page lost focus
 	);
-	tripLog.entries.forEach(pos=>{
-		let lat=pos.coords.latitude;
-		let lon=pos.coords.longitude;
-		let ele=pos.coords.altitude;
-		let time=(new Date(pos.timestamp)).toISOString();
+	tripLog.entries.forEach(segment=>{
 		payload.push(
+`<trkseg>
+`
+		);
+		segment.forEach(pos=>{
+			let lat=pos.coords.latitude;
+			let lon=pos.coords.longitude;
+			let ele=pos.coords.altitude;
+			let time=(new Date(pos.timestamp)).toISOString();
+			payload.push(
 `<trkpt lat="${lat}" lon="${lon}">${
 ele?`  <ele>${ele}</ele>`:''}
 <time>${time}</time>
 </trkpt>
 `
+			);		
+		});
+		payload.push(
+`</trkseg>
+`
 		);
 	});
 	payload.push(
-`</trkseg>
-</trk>
+`</trk>
 `
 	);
 	payload.push(
@@ -146,10 +177,12 @@ function updateUserDisplays(pos){
 	
 	let speedEl=document.getElementById('speed');
 	let locationEl=document.getElementById('location');
+	let locationUncertaintyEl=document.getElementById('locU');
 	let distanceEl=document.getElementById('distance');
 	
 	speedEl.textContent=renderPrettySpeed(pos.coords.speed,speedEl.getAttribute('data-unit'));// + renderPrettyBearing(tripLog,pos)
 	locationEl.textContent=renderPrettyCoords(pos.coords);
+	locationUncertaintyEl.textContent='±∓'[tripLog.currentSegment.length%2]+`${accuracy.toFixed(1)}m`;
 	distanceEl.textContent=TripLog.renderPrettyDistance(tripLog,distanceEl.getAttribute('data-unit'));
 }
 
@@ -161,7 +194,7 @@ function renderPrettySpeed(speed,unit='mph'){
 function renderPrettyCoords(coords){
 	let lat=coords.latitude;
 	let lon=coords.longitude;
-	if(coords.accuracy<10){
+	if(coords.accuracy<8){
 		return OpenLocationCode.encode(lat,lon,OpenLocationCode.CODE_PRECISION_EXTRA ).slice(4);
 	} else {
 		return OpenLocationCode.encode(lat,lon,OpenLocationCode.CODE_PRECISION_NORMAL).slice(4);
@@ -240,7 +273,7 @@ function applyLanguagePrefs(){
 <body onload="main();">
 <div class="telemetryDisplayWrapper">
 <p id="speedWrapper">Speed: <span id="speed">…</span></p>
-<p id="locationWrapper">Location: <span id="location">…</span></p>
+<p id="locationWrapper">Location: <span id="location">…</span><spad id="locU"></span></p>
 <p id="distanceWrapper">Distance Traveled: <span id="distance">…</span><br /><button onclick="tripLog.offerToSave();">Save Trip Log</button></p>
 </div>
 <p id="tripLogLinkWrapper"></p>
