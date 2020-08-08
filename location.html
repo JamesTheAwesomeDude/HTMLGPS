@@ -5,7 +5,7 @@
 <title>HTMLGPS 0.0.2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/openlocationcode/1.0.4/openlocationcode.min.js" integrity="sha512-nNdmCJgFefLPn6W79uEUxH2n4+qbc0kJM8uBD8f7GlmusrQN9L13hpSBRxLHdLs+6oSDurcCuDlBXVKaz/hpcA==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.11.0/NoSleep.min.js" integrity="sha512-z2nddjNLcxjIKYaNqKfpwgl+8mFVU4gTL8afldQukUIOKYgFbD2TyDCyAFlCKuWoLhEJ49zpEnzLDiPMXKJ1kQ==" crossorigin="anonymous"></script>
-<script src="vincenty.js"></script>
+<script src="https://www.ishygddt.xyz/~james/vincenty.js" integrity="sha512-+OH160Itw1ie77AV3FhD60ZTZN9fbMsBI+/03kNOGxXzgEnf7EPb+tc2Q3CeSzGzS1SZyetTix/eGx/jWuT4jQ==" crossorigin="anonymous"></script>
 <script>
 const softwareVersionString=`${document.querySelector('title').textContent} [${navigator.userAgent}] - https://www.github.com/JamesTheAwesomeDude/HTMLGPS`
 
@@ -20,6 +20,7 @@ function _main(){
 		tripLog.update(pos);
 	 },
 	 err=>{
+		alert(`Error is allegedly:\n\n${err.message}`);
 		invalidateUserDisplays();
 		//closeTripLogSegment(tripLog);
 		tripLog.offerToSave();
