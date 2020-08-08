@@ -2,7 +2,7 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=2">
-<title>HTMLGPS 0.0.2</title>
+<title>HTMLGPS 0.0.3</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/openlocationcode/1.0.4/openlocationcode.min.js" integrity="sha512-nNdmCJgFefLPn6W79uEUxH2n4+qbc0kJM8uBD8f7GlmusrQN9L13hpSBRxLHdLs+6oSDurcCuDlBXVKaz/hpcA==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.11.0/NoSleep.min.js" integrity="sha512-z2nddjNLcxjIKYaNqKfpwgl+8mFVU4gTL8afldQukUIOKYgFbD2TyDCyAFlCKuWoLhEJ49zpEnzLDiPMXKJ1kQ==" crossorigin="anonymous"></script>
 <script src="https://www.ishygddt.xyz/~james/vincenty.js" integrity="sha512-+OH160Itw1ie77AV3FhD60ZTZN9fbMsBI+/03kNOGxXzgEnf7EPb+tc2Q3CeSzGzS1SZyetTix/eGx/jWuT4jQ==" crossorigin="anonymous"></script>
@@ -173,18 +173,18 @@ function updateUserDisplays(pos){
 	let speed=pos.coords.speed;
 	let heading=pos.coords.heading;
 	//let course=getCourse(tripLog,pos);
-	let accuracy=pos.coords.accuracy;
+	let acc=pos.coords.accuracy;
 	let ele=pos.coords.altitude;
-	let eleAccuracy=pos.coords.altitudeAccuracy;
+	let eleAcc=pos.coords.altitudeAccuracy;
 	
 	let speedEl=document.getElementById('speed');
 	let locationEl=document.getElementById('location');
 	let locationUncertaintyEl=document.getElementById('locU');
 	let distanceEl=document.getElementById('distance');
-	
+
 	speedEl.textContent=renderPrettySpeed(pos.coords,speedEl.getAttribute('data-unit'));// + renderPrettyBearing(tripLog,pos)
 	locationEl.textContent=renderPrettyCoords(pos.coords);
-	locationUncertaintyEl.textContent='±∓'[tripLog.currentSegment.length%2]+`${accuracy.toFixed(1)}m`;
+	locationUncertaintyEl.textContent='±∓'[tripLog.currentSegment.length%2]+`${acc?acc.toFixed(1):'??.?'}m`;
 	distanceEl.textContent=TripLog.renderPrettyDistance(tripLog,distanceEl.getAttribute('data-unit'));
 }
 function invalidateUserDisplays(){
