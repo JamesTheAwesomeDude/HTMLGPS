@@ -116,7 +116,7 @@ http://www.topografix.com/GPX/1/0/gpx.xsd">
 	);
 	
 	payload.push(
-`<trk><name>${escapeText(prompt('What do you want to name this trace?') || 'test run')}</name>
+`<trk><name>${escapeText(prompt('What do you want to name this trace?','test run'))}</name>
 ` //TODO: multi-segments based on when the page lost focus
 	);
 	tripLog.entries.forEach(segment=>{
