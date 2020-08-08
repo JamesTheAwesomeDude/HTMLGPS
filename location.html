@@ -180,15 +180,15 @@ function updateUserDisplays(pos){
 	let locationUncertaintyEl=document.getElementById('locU');
 	let distanceEl=document.getElementById('distance');
 	
-	speedEl.textContent=renderPrettySpeed(pos.coords.speed,speedEl.getAttribute('data-unit'));// + renderPrettyBearing(tripLog,pos)
+	speedEl.textContent=renderPrettySpeed(pos.coords,speedEl.getAttribute('data-unit'));// + renderPrettyBearing(tripLog,pos)
 	locationEl.textContent=renderPrettyCoords(pos.coords);
 	locationUncertaintyEl.textContent='±∓'[tripLog.currentSegment.length%2]+`${accuracy.toFixed(1)}m`;
 	distanceEl.textContent=TripLog.renderPrettyDistance(tripLog,distanceEl.getAttribute('data-unit'));
 }
 
-function renderPrettySpeed(speed,unit='mph'){
-	if(isNaN(speed)) return '???';
-	return (speed*unitConversions[unit]).toFixed(1)+unit;
+function renderPrettySpeed(coords,unit='mph'){
+	if(isNaN(coords.speed)) return '???';
+	return (coords.speed*unitConversions[unit]).toFixed(1)+unit+(coords.speed<Math.sqrt(coords.accuracy) ? '?' : '');
 }
 
 function renderPrettyCoords(coords){
