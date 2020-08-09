@@ -36,76 +36,76 @@ function main(event){//body.onload=='main(event);'
 }
 
 class TripLog {
- constructor(){
-	this.date=new Date();
-	this.entries=[new Array()];
- }
+	constructor(){
+		this.date=new Date();
+		this.entries=[new Array()];
+	}
 
- get currentSegment() {return this.entries.slice(-1)[0]};
+	get currentSegment() {return this.entries.slice(-1)[0]};
 
- incrementSegment(){
-	this.entries.push(new Array());
- }
+	incrementSegment(){
+		this.entries.push(new Array());
+	}
 
- update(pos){
-	let t=pos.timestamp;
-	let d1t,d2t;
-	if(this.currentSegment.length>1){
-		d1t=t-this.currentSegment.slice(-1)[0].timestamp;
-		d2t=t-d1t-this.currentSegment.slice(-2)[0].timestamp;
-		if( d1t > Math.E*d2t ){
-			this.incrementSegment();
+	update(pos){
+		let t=pos.timestamp;
+		let d1t,d2t;
+		if(this.currentSegment.length>1){
+			d1t=t-this.currentSegment.slice(-1)[0].timestamp;
+			d2t=t-d1t-this.currentSegment.slice(-2)[0].timestamp;
+			if( d1t > Math.E*d2t ){
+				this.incrementSegment();
+			}
+		}
+		this.currentSegment.push(pos);
+	}
+
+	vibeCheck(){
+		let numberOfZeroEles=0;
+		let numberOfTrkpts=0;
+		this.entries.forEach(
+		 segment=>segment.forEach(
+		  pos=>{
+		  	numberOfTrkpts++;
+		  	numberOfZeroEles+=(pos.coords.altitude==0.0);
+		  }
+		 )
+		);
+		if(numberOfZeroEles>Math.sqrt(numberOfTrkpts)){
+		 this.entries.forEach(
+		  segment=>segment.forEach(
+		   pos=>{
+		   	delete pos.coords.altitude;
+		   }
+		  )
+		 );
 		}
 	}
-	this.currentSegment.push(pos);
- }
 
- vibeCheck(){
-	let numberOfZeroEles=0;
-	let numberOfTrkpts=0;
-	this.entries.forEach(
-	 segment=>segment.forEach(
-	  pos=>{
-	  	numberOfTrkpts++;
-	  	numberOfZeroEles+=(pos.coords.altitude==0.0);
-	  }
-	 )
-	);
-	if(numberOfZeroEles>Math.sqrt(numberOfTrkpts)){
-	 this.entries.forEach(
-	  segment=>segment.forEach(
-	   pos=>{
-	   	delete pos.coords.altitude;
-	   }
-	  )
-	 );
+	offerToSave(container=document.getElementById('tripLogLinkWrapper')){
+		this.vibeCheck();
+		let payload=TripLog.renderPayload(this);
+		let a=document.createElement('a');
+		let fname=`trip_${getYYYYMMDDHHMM()}.gpx`;
+		a.href=renderBlobURL(payload,fname,{type:'text/xml'});
+		a.download=fname;
+		a.textContent=fname;
+		a.onclick=ev=>setTimeout(e=>(
+		 URL.revokeObjectURL(
+		  e.parentNode.removeChild(e)
+		  .href
+		 )
+		),0,ev.target);
+		container.appendChild(a);
 	}
- }
 
- offerToSave(container=document.getElementById('tripLogLinkWrapper')){
-	this.vibeCheck();
-	let payload=TripLog.renderPayload(this);
-	let a=document.createElement('a');
-	let fname=`trip_${getYYYYMMDDHHMM()}.gpx`;
-	a.href=renderBlobURL(payload,fname,{type:'text/xml'});
-	a.download=fname;
-	a.textContent=fname;
-	a.onclick=ev=>setTimeout(e=>(
-	 URL.revokeObjectURL(
-	  e.parentNode.removeChild(e)
-	  .href
-	 )
-	),0,ev.target);
-	container.appendChild(a);
- }
+	static renderPrettyDistance(tripLog,unit='miles'){
+		return '[TODO]';
+	}
 
- static renderPrettyDistance(tripLog,unit='miles'){
-	return '[TODO]';
- }
-
- static renderPayload(tripLog){
-	let payload=[];
-	payload.push(
+	static renderPayload(tripLog){
+		let payload=[];
+		payload.push(
 `<?xml version="1.0"?>
 <gpx
  version="1.0"
@@ -116,45 +116,45 @@ xsi:schemaLocation="http://www.topografix.com/GPX/1/0
 http://www.topografix.com/GPX/1/0/gpx.xsd">
 <time>${tripLog.date.toISOString()}</time>
 `
-	);
-	
-	payload.push(
+		);
+		
+		payload.push(
 `<trk><name>${escapeText(prompt('What do you want to name this trace?','test run'))}</name>
 ` //TODO: multi-segments based on when the page lost focus
-	);
-	tripLog.entries.forEach(segment=>{
-		payload.push(
+		);
+		tripLog.entries.forEach(segment=>{
+			payload.push(
 `<trkseg>
 `
-		);
-		segment.forEach(pos=>{
-			let lat=pos.coords.latitude;
-			let lon=pos.coords.longitude;
-			let ele=pos.coords.altitude;
-			let time=(new Date(pos.timestamp)).toISOString();
-			payload.push(
+			);
+			segment.forEach(pos=>{
+				let lat=pos.coords.latitude;
+				let lon=pos.coords.longitude;
+				let ele=pos.coords.altitude;
+				let time=(new Date(pos.timestamp)).toISOString();
+				payload.push(
 `<trkpt lat="${lat}" lon="${lon}">${
 ele?`  <ele>${ele}</ele>`:''}
 <time>${time}</time>
 </trkpt>
 `
-			);		
-		});
-		payload.push(
+				);		
+			});
+			payload.push(
 `</trkseg>
 `
-		);
-	});
-	payload.push(
+			);
+		});
+		payload.push(
 `</trk>
 `
-	);
-	payload.push(
+		);
+		payload.push(
 `</gpx>`
-	);
-	
-	return payload;
- }
+		);
+		
+		return payload;
+	}
 }
 
 const geo=navigator.geolocation;
