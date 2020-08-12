@@ -8,6 +8,7 @@
 <script src="https://www.ishygddt.xyz/~james/vincenty.js" integrity="sha512-+OH160Itw1ie77AV3FhD60ZTZN9fbMsBI+/03kNOGxXzgEnf7EPb+tc2Q3CeSzGzS1SZyetTix/eGx/jWuT4jQ==" crossorigin="anonymous"></script>
 <script>
 const softwareVersionString=`${document.querySelector('title').textContent} [${navigator.userAgent}] - https://www.github.com/JamesTheAwesomeDude/HTMLGPS`
+//TODO: allow specifying device/receiver model?
 
 var tripLog;
 
@@ -41,7 +42,7 @@ class TripLog {
 		this.entries=[new Array()];
 	}
 
-	get currentSegment() {return this.entries.slice(-1)[0]};
+	get currentSegment() {return this.entries[this.entries.length-1]};
 
 	incrementSegment(){
 		this.entries.push(new Array());
@@ -60,34 +61,11 @@ class TripLog {
 		this.currentSegment.push(pos);
 	}
 
-	vibeCheck(){
-		let numberOfZeroEles=0;
-		let numberOfTrkpts=0;
-		this.entries.forEach(
-		 segment=>segment.forEach(
-		  pos=>{
-		  	numberOfTrkpts++;
-		  	numberOfZeroEles+=(pos.coords.altitude==0.0);
-		  }
-		 )
-		);
-		if(numberOfZeroEles>Math.sqrt(numberOfTrkpts)){
-		 this.entries.forEach(
-		  segment=>segment.forEach(
-		   pos=>{
-		   	delete pos.coords.altitude;
-		   }
-		  )
-		 );
-		}
-	}
-
 	offerToSave(container=document.getElementById('tripLogLinkWrapper')){
-		this.vibeCheck();
-		let payload=TripLog.renderPayload(this);
+		let payload=this.renderPayload();
 		let a=document.createElement('a');
 		let fname=`trip_${getYYYYMMDDHHMM()}.gpx`;
-		a.href=renderBlobURL(payload,fname,{type:'text/xml'});
+		a.href=renderBlobURL([payload],fname,{type:'text/xml'});
 		a.download=fname;
 		a.textContent=fname;
 		a.onclick=ev=>setTimeout(e=>(
@@ -103,57 +81,93 @@ class TripLog {
 		return '[TODO]';
 	}
 
-	static renderPayload(tripLog){
-		let payload=[];
-		payload.push(
+	renderPayload(){
+		console.log("TODO: https://stackoverflow.com/questions/376373/pretty-printing-xml-with-javascript");
+		return (
+		 new XMLSerializer()
+		 .serializeToString(
+		  TripLog._renderPayload(this))
+		);
+	}
+
+	static _renderPayload(tripLog){
+		const gpxDOM=(new DOMParser()).parseFromString(
 `<?xml version="1.0"?>
 <gpx
  version="1.0"
-creator="${softwareVersionString}"
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xmlns="http://www.topografix.com/GPX/1/0"
 xsi:schemaLocation="http://www.topografix.com/GPX/1/0
 http://www.topografix.com/GPX/1/0/gpx.xsd">
-<time>${tripLog.date.toISOString()}</time>
-`
-		);
-		
-		payload.push(
-`<trk><name>${escapeText(prompt('What do you want to name this trace?','test run'))}</name>
-` //TODO: multi-segments based on when the page lost focus
-		);
+</gpx>
+`,
+		'text/xml');
+		const gpx=gpxDOM.documentElement;
+		gpx.setAttribute('creator',softwareVersionString);
+
+		//TODO: should these be DocumentFragment-based instead?
+		//this seems like an awkward workaround
+		function createElement(name,doc=gpxDOM){
+			return doc.createElementNS(doc.documentElement.namespaceURI,name);
+		}
+		function createTextElement(name,textContent,doc=gpxDOM){
+			let e=doc.createElementNS(doc.documentElement.namespaceURI,name);
+			e.textContent=textContent;
+			return e;
+		}
+
+		gpx.appendChild(createElement('time'))
+		.textContent=tripLog.date.toISOString();
+
+		let trk=createElement('trk');
 		tripLog.entries.forEach(segment=>{
-			payload.push(
-`<trkseg>
-`
-			);
+			let trkseg=trk.appendChild(createElement('trkseg'));
 			segment.forEach(pos=>{
-				let lat=pos.coords.latitude;
-				let lon=pos.coords.longitude;
-				let ele=pos.coords.altitude;
-				let time=(new Date(pos.timestamp)).toISOString();
-				payload.push(
-`<trkpt lat="${lat}" lon="${lon}">${
-ele?`  <ele>${ele}</ele>`:''}
-<time>${time}</time>
-</trkpt>
-`
-				);		
+				let trkpt=createElement('trkpt');
+
+				//Mandatory properties
+
+				trkpt.appendChild(createTextElement('time',(new Date(pos.timestamp)).toISOString()));
+
+				trkpt.setAttribute('lat',pos.coords.latitude);
+				trkpt.setAttribute('lon',pos.coords.longitude);
+
+				//Optional properties
+
+				if(Number.isFinite(pos.coords.accuracy))
+					trkpt.appendChild(createTextElement('hdop',pos.coords.accuracy));
+
+				if(Number.isFinite(pos.coords.altitude)){
+					trkpt.appendChild(createTextElement('ele',pos.coords.altitude));
+					if(Number.isFinite(pos.coords.altitudeAccuracy)){
+						trkpt.appendChild(createTextElement('vdop',pos.coords.altitudeAccuracy));
+					}
+				}
+
+				//TODO? might need an "extension"...however those work
+				//if(Number.isFinite(pos.coords.heading){
+				//	trkpt.appendChild(createTextElement('hdg',pos.coords.heading));
+				//}
+
+				//TODO? maybe don't include this since speed can be
+				// more-objectively derived afterwards
+				//if(pos.coords.speed){
+				//	trkpt.appendChild(createTextElement('ele',pos.coords.altitude));
+				//}
+
+				trkseg.appendChild(trkpt);
 			});
-			payload.push(
-`</trkseg>
-`
-			);
+			trk.appendChild(trkseg);
 		});
-		payload.push(
-`</trk>
-`
-		);
-		payload.push(
-`</gpx>`
-		);
-		
-		return payload;
+		gpx.appendChild(trk);
+		{
+			let name;
+			if(name=prompt('Would you like to name this trace?')){
+				trk.prepend(createTextElement('name',name));
+			}
+		}
+
+		return gpx;
 	}
 }
 
@@ -172,7 +186,7 @@ function updateUserDisplays(pos){
 	let lon=pos.coords.longitude;
 	let speed=pos.coords.speed;
 	let heading=pos.coords.heading;
-	//let course=getCourse(tripLog,pos);
+	//let bearing=tripLog.getBearing(pos);
 	let acc=pos.coords.accuracy;
 	let ele=pos.coords.altitude;
 	let eleAcc=pos.coords.altitudeAccuracy;
