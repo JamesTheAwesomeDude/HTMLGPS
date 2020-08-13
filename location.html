@@ -2,7 +2,7 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=2">
-<title>HTMLGPS 0.0.3</title>
+<title>HTMLGPS 0.0.4</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/openlocationcode/1.0.4/openlocationcode.min.js" integrity="sha512-nNdmCJgFefLPn6W79uEUxH2n4+qbc0kJM8uBD8f7GlmusrQN9L13hpSBRxLHdLs+6oSDurcCuDlBXVKaz/hpcA==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.11.0/NoSleep.min.js" integrity="sha512-z2nddjNLcxjIKYaNqKfpwgl+8mFVU4gTL8afldQukUIOKYgFbD2TyDCyAFlCKuWoLhEJ49zpEnzLDiPMXKJ1kQ==" crossorigin="anonymous"></script>
 <script src="https://www.ishygddt.xyz/~james/vincenty.js" integrity="sha512-+OH160Itw1ie77AV3FhD60ZTZN9fbMsBI+/03kNOGxXzgEnf7EPb+tc2Q3CeSzGzS1SZyetTix/eGx/jWuT4jQ==" crossorigin="anonymous"></script>
@@ -10,21 +10,29 @@
 const softwareVersionString=`${document.querySelector('title').textContent} [${navigator.userAgent}] - https://www.github.com/JamesTheAwesomeDude/HTMLGPS`
 //TODO: allow specifying device/receiver model?
 
+const geo=navigator.geolocation;//TODO: fake geo harness?
+const unitConversions={
+ 'm/s':   1,
+ 'mph':   2.236936292054402,
+ 'km/h':  3.6,
+ 'm':     1,
+ 'km':    1e-3,
+ 'miles': 6.213711922373339e-4
+}
+
 var tripLog;
 
 function _main(){
 	tripLog=new TripLog();
 	applyLanguagePrefs();
 	geo.watchPosition(pos=>{
-		//openTripLogSegment(tripLog);
 		updateUserDisplays(pos);
 		tripLog.update(pos);
 	 },
 	 err=>{
 		alert(`Error is allegedly:\n\n${err.message}`);
 		invalidateUserDisplays();
-		//closeTripLogSegment(tripLog);
-		if(tripLog.currentSegment.length){
+		if(tripLog.currentSegment.length){//TODO fix this logic
 			tripLog.offerToSave();
 		}
 	 },
@@ -171,16 +179,7 @@ http://www.topografix.com/GPX/1/0/gpx.xsd">
 	}
 }
 
-const geo=navigator.geolocation;
-const unitConversions={
- 'm/s':   1,
- 'mph':   2.236936292054402,
- 'km/h':  3.6,
- 'm':     1,
- 'km':    1e-3,
- 'miles': 6.213711922373339e-4
-}
-
+//TODO: make this an object like TripLog
 function updateUserDisplays(pos){
 	let lat=pos.coords.latitude;
 	let lon=pos.coords.longitude;
@@ -218,17 +217,17 @@ function invalidateUserDisplays(){
 
 function renderPrettySpeed(coords,unit='mph'){
 	if(isNaN(coords.speed)) return '???';
-	return (coords.speed*unitConversions[unit]).toFixed(1)+unit+(coords.speed<Math.sqrt(coords.accuracy) ? '?' : '');
+	let s=`${coords.speed*unitConversions[unit]).toFixed(1)}${unit}`;
+	s+=(coords.speed<Math.sqrt(coords.accuracy)?'?':'';
+	return s;
 }
 
 function renderPrettyCoords(coords){
 	let lat=coords.latitude;
 	let lon=coords.longitude;
-	if(coords.accuracy<8){
-		return OpenLocationCode.encode(lat,lon,OpenLocationCode.CODE_PRECISION_EXTRA ).slice(4);
-	} else {
-		return OpenLocationCode.encode(lat,lon,OpenLocationCode.CODE_PRECISION_NORMAL).slice(4);
-	}
+	let precision=(coords.accuracy<8)?OpenLocationCode.CODE_PRECISION_EXTRA:CODE_PRECISION_NORMAL;
+	let code=OpenLocationCode.encode(lat,lon,precision);
+	return code.slice(4);
 }
 
 function getYYYYMMDDHHMM(d=new Date()){
@@ -252,6 +251,7 @@ function renderBlobURL(data,fname,properties){// ht- https://stackoverflow.com/a
 	return URL.createObjectURL(file);
 }
 
+//TODO: make this a toggleable checkbox
 function enableNoSleepButton(event){
 	window.noSleep = new NoSleep();
 	window.noSleep.enable();
